@@ -45,9 +45,9 @@
   right: 0;
   height: 3px;
   transform-origin: 0%;
-  background: linear-gradient(90deg, #5ec7ff 0%, #7e84ff 45%, #9d73ff 100%);
+  background: linear-gradient(90deg, #fffef0 0%, #fff3b0 38%, #ffd54a 100%);
   z-index: 20;
-  box-shadow: 0 0 24px rgba(120, 122, 255, 0.8);
+  box-shadow: 0 0 24px rgba(255, 224, 102, 0.95);
 }
 
 .top-bar {
