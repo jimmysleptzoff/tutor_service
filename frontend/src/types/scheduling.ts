@@ -1,4 +1,11 @@
 export type DemoRole = "student" | "tutor" | "admin";
+export type DemoScenario = "normal" | "finals" | "tutor_shortage";
+
+export type DemoAlert = {
+  id: string;
+  level: "info" | "success" | "warning" | "danger";
+  message: string;
+};
 
 export type Metric = {
   label: string;

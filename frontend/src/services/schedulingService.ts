@@ -19,6 +19,14 @@ export function formatBookingMessage({ courseNum, tutorId, slotId }: BookingInpu
     return "Complete course, tutor, and time selection to confirm the session.";
   }
 
+  if (!tutor.courseNums.includes(courseNum)) {
+    return `${tutor.name} does not currently cover ${courseNum}. Choose a matching tutor to continue.`;
+  }
+
+  if (slot.tutorId !== tutor.id) {
+    return "That time slot is no longer available for the selected tutor. Pick another open slot.";
+  }
+
   return `Booked ${courseNum} with ${tutor.name} at ${slot.start}. Conflict risk: 0%.`;
 }
 

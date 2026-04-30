@@ -1,5 +1,6 @@
 import { motion } from "framer-motion";
 import { Rocket, ShieldCheck } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import FinalCta from "../components/FinalCta";
 import OpsShowcase from "../components/OpsShowcase";
 import ScrollReveal from "../components/ScrollReveal";
@@ -8,9 +9,10 @@ import TrustStrip from "../components/TrustStrip";
 import { metrics } from "../data/mockData";
 
 export default function LandingPage() {
+  const navigate = useNavigate();
+
   return (
     <div className="landing-stack">
-      {/* Hero stays lightweight on purpose: subtle ambience, no heavy 3D dependency. */}
       <motion.section
         className="hero-panel ring-1 ring-white/10"
         initial={{ opacity: 0, y: 14 }}
@@ -37,14 +39,17 @@ export default function LandingPage() {
             in one place so your team can show the full workflow clearly.
           </p>
           <div className="hero-actions">
-            <button className="primary-btn" type="button">Create free account</button>
-            <button className="ghost-btn" type="button">I already have access</button>
+            <button className="primary-btn" type="button" onClick={() => navigate("/student")}>
+              Create free account
+            </button>
+            <button className="ghost-btn" type="button" onClick={() => navigate("/tutor")}>
+              I already have access
+            </button>
           </div>
           <p className="hero-microline">No credit card required · reliable for live demos</p>
         </div>
       </motion.section>
 
-      {/* The rest of the page walks the presentation story in order: value -> trust -> ops -> close. */}
       <ScrollReveal className="panel ring-1 ring-white/10" delay={0.03}>
         <div className="section-head">
           <p className="eyebrow">01 | Platform</p>

@@ -6,7 +6,7 @@ import AdminOpsPage from "./pages/AdminOpsPage";
 import LandingPage from "./pages/LandingPage";
 import StudentBookingPage from "./pages/StudentBookingPage";
 import TutorDashboardPage from "./pages/TutorDashboardPage";
-import type { DemoRole } from "./types/scheduling";
+import type { DemoAlert, DemoRole, DemoScenario } from "./types/scheduling";
 
 const roleToPath: Record<DemoRole, string> = {
   student: "/student",
@@ -20,12 +20,30 @@ const pathToRole: Record<string, DemoRole> = {
   "/admin": "admin",
 };
 
+const scenarioAlerts: Record<DemoScenario, DemoAlert[]> = {
+  normal: [
+    { id: "a1", level: "info", message: "Booking flow latency is stable under 1 second." },
+    { id: "a2", level: "success", message: "No conflicts detected across current session windows." },
+    { id: "a3", level: "warning", message: "CHEM115 queue is trending upward for tomorrow." },
+  ],
+  finals: [
+    { id: "a4", level: "warning", message: "Finals week demand spike: 42% more booking attempts." },
+    { id: "a5", level: "warning", message: "MATH155 waitlist crossed escalation threshold." },
+    { id: "a6", level: "success", message: "Auto-assignment reroutes saved 11 at-risk sessions." },
+  ],
+  tutor_shortage: [
+    { id: "a7", level: "danger", message: "Two tutors marked unavailable in the next 24 hours." },
+    { id: "a8", level: "warning", message: "CS110 utilization at 96%, backup coverage recommended." },
+    { id: "a9", level: "success", message: "Priority queue policy reduced expected churn by 18%." },
+  ],
+};
+
 function App() {
   const [role, setRole] = useState<DemoRole>("student");
+  const [scenario, setScenario] = useState<DemoScenario>("normal");
   const navigate = useNavigate();
   const location = useLocation();
 
-  // Keep the dropdown role in sync when someone navigates directly by URL/tab.
   useEffect(() => {
     const routeRole = pathToRole[location.pathname];
     if (routeRole && routeRole !== role) {
@@ -33,7 +51,6 @@ function App() {
     }
   }, [location.pathname, role]);
 
-  // When the role changes from the header, jump to that role's page right away.
   function handleRoleChange(nextRole: DemoRole) {
     setRole(nextRole);
     const nextPath = roleToPath[nextRole];
@@ -43,12 +60,18 @@ function App() {
   }
 
   return (
-    <AppLayout role={role} setRole={handleRoleChange}>
+    <AppLayout
+      role={role}
+      setRole={handleRoleChange}
+      scenario={scenario}
+      setScenario={setScenario}
+      alerts={scenarioAlerts[scenario]}
+    >
       <Routes>
         <Route path="/" element={<LandingPage />} />
-        <Route path="/student" element={<StudentBookingPage />} />
-        <Route path="/tutor" element={<TutorDashboardPage />} />
-        <Route path="/admin" element={<AdminOpsPage />} />
+        <Route path="/student" element={<StudentBookingPage scenario={scenario} />} />
+        <Route path="/tutor" element={<TutorDashboardPage scenario={scenario} />} />
+        <Route path="/admin" element={<AdminOpsPage scenario={scenario} />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </AppLayout>
