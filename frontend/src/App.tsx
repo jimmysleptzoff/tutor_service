@@ -41,6 +41,7 @@ const scenarioAlerts: Record<DemoScenario, DemoAlert[]> = {
 function App() {
   const [role, setRole] = useState<DemoRole>("student");
   const [scenario, setScenario] = useState<DemoScenario>("normal");
+
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -69,13 +70,21 @@ function App() {
     >
       <Routes>
         <Route path="/" element={<LandingPage />} />
-        <Route path="/student" element={<StudentBookingPage scenario={scenario} />} />
-        <Route path="/tutor" element={<TutorDashboardPage scenario={scenario} />} />
-        <Route path="/admin" element={<AdminOpsPage scenario={scenario} />} />
+
+        {/* remove scenario */}
+        <Route
+  path="/student"
+  element={<StudentBookingPage scenario={scenario} />}
+/>
+
+        <Route path="/tutor" element={<TutorDashboardPage />} />
+        <Route path="/admin" element={<AdminOpsPage />} />
+
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </AppLayout>
   );
 }
+
 
 export default App;

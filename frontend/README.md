@@ -1,3 +1,14 @@
+## Setup
+
+1. Run database.sql in MySQL
+2. Update DB credentials in server.js
+3. Run backend:
+   node server.js
+4. Run frontend:
+   npm start / npm start dev
+
+
+
 # Getting Started with Create React App
 
 This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
