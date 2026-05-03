@@ -23,12 +23,17 @@ db.connect(err => {
 
 // GET USER (LOGIN)
 app.get("/users/:studentId", (req, res) => {
-  const studentId = Number(req.params.studentId); // 🔥 FORCE NUMBER
+  const studentId = Number(req.params.studentId);
 
   const sql = "SELECT * FROM users WHERE studentId = ?";
 
   db.query(sql, [studentId], (err, result) => {
-    if (err) return res.status(500).json(err);
+    if (err) {
+      console.error(err);
+      return res.status(500).json({
+        message: err.sqlMessage || err.message || "Database error",
+      });
+    }
 
     if (result.length === 0) {
       return res.status(404).json({ message: "User not found" });
@@ -40,15 +45,35 @@ app.get("/users/:studentId", (req, res) => {
 
 // CREATE USER (SIGNUP)
 app.post("/users", (req, res) => {
-  const studentId = Number(req.body.studentId);
   const { firstName, lastName, email, role } = req.body;
+  const rawStudentId = req.body.studentId;
+
+  if (rawStudentId === undefined || rawStudentId === null || String(rawStudentId).trim() === "") {
+    return res.status(400).json({ message: "Student ID is required" });
+  }
+
+  const studentId = Number(rawStudentId);
+  if (!Number.isFinite(studentId)) {
+    return res.status(400).json({ message: "Student ID must be a valid number" });
+  }
+
+  if (!firstName || !lastName || !email || !role) {
+    return res.status(400).json({ message: "First name, last name, email, and role are required" });
+  }
 
   db.query(
     "SELECT * FROM users WHERE studentId = ?",
     [studentId],
     (err, result) => {
+      if (err) {
+        console.error(err);
+        return res.status(500).json({
+          message: err.sqlMessage || err.message || "Database error while checking user",
+        });
+      }
+
       if (result.length > 0) {
-        return res.status(400).json({ message: "User already exists" });
+        return res.status(400).json({ message: "An account with this student ID already exists. Use Login instead." });
       }
 
       const sql = `
@@ -59,8 +84,16 @@ app.post("/users", (req, res) => {
       db.query(
         sql,
         [studentId, firstName, lastName, email, role],
-        err => {
-          if (err) return res.status(500).json(err);
+        (insertErr) => {
+          if (insertErr) {
+            console.error(insertErr);
+            return res.status(500).json({
+              message:
+                insertErr.sqlMessage ||
+                insertErr.message ||
+                "Could not create account (check database connection and users table)",
+            });
+          }
 
           res.json({
             studentId,
@@ -211,4 +244,6 @@ app.get("/tutors", (req, res) => {
 });
 
 
-app.listen(5000, () => console.log("Server running on port 5000"));
+app.listen(5000, "0.0.0.0", () =>
+  console.log("API listening on http://0.0.0.0:5000 (try http://127.0.0.1:5000/tutors)")
+);

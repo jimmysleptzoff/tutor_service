@@ -1,13 +1,5 @@
 import React, { useEffect, useState } from "react";
-import {
-  LineChart,
-  Line,
-  XAxis,
-  YAxis,
-  Tooltip,
-  CartesianGrid,
-  ResponsiveContainer,
-} from "recharts";
+import { apiUrl } from "../api";
 
 export default function AdminOpsPage({ user }: any) {
   const [appointments, setAppointments] = useState<any[]>([]);
@@ -16,7 +8,7 @@ export default function AdminOpsPage({ user }: any) {
   const [statusFilter, setStatusFilter] = useState("all");
 
   const load = async () => {
-    const res = await fetch("http://localhost:5000/appointments");
+    const res = await fetch(apiUrl("/appointments"));
     const data = await res.json();
     setAppointments(Array.isArray(data) ? data : []);
   };
@@ -28,10 +20,9 @@ export default function AdminOpsPage({ user }: any) {
   const cancelSession = async (id: number) => {
     if (!window.confirm("Cancel this session?")) return;
 
-    const res = await fetch(
-      `http://localhost:5000/appointments/${id}/cancel`,
-      { method: "PUT" }
-    );
+    const res = await fetch(apiUrl(`/appointments/${id}/cancel`), {
+      method: "PUT",
+    });
 
     if (res.ok) {
       setMessage("Session cancelled");
@@ -42,10 +33,9 @@ export default function AdminOpsPage({ user }: any) {
   const deleteSession = async (id: number) => {
     if (!window.confirm("Delete permanently?")) return;
 
-    const res = await fetch(
-      `http://localhost:5000/appointments/${id}`,
-      { method: "DELETE" }
-    );
+    const res = await fetch(apiUrl(`/appointments/${id}`), {
+      method: "DELETE",
+    });
 
     if (res.ok) {
       setMessage("Session deleted");
@@ -65,7 +55,6 @@ export default function AdminOpsPage({ user }: any) {
     return textMatch && statusMatch;
   });
 
-  // chart data
   const chartData = Object.values(
     appointments.reduce((acc: any, a: any) => {
       const date = new Date(a.startDateTime).toLocaleDateString();
@@ -77,7 +66,9 @@ export default function AdminOpsPage({ user }: any) {
       acc[date].count += 1;
       return acc;
     }, {})
-  );
+  ) as { date: string; count: number }[];
+
+  const maxCount = Math.max(1, ...chartData.map((d) => d.count));
 
   return (
     <div style={styles.page}>
@@ -87,15 +78,27 @@ export default function AdminOpsPage({ user }: any) {
 
       <div style={styles.chartCard}>
         <h3>Sessions Per Day</h3>
-        <ResponsiveContainer width="100%" height={250}>
-          <LineChart data={chartData}>
-            <CartesianGrid stroke="#334155" />
-            <XAxis dataKey="date" />
-            <YAxis />
-            <Tooltip />
-            <Line type="monotone" dataKey="count" stroke="#3b82f6" />
-          </LineChart>
-        </ResponsiveContainer>
+        {chartData.length === 0 ? (
+          <p style={styles.chartEmpty}>No session data yet.</p>
+        ) : (
+          <div style={styles.barChart}>
+            {chartData.map((row) => (
+              <div key={row.date} style={styles.barColumn}>
+                <div style={styles.barTrack}>
+                  <div
+                    style={{
+                      ...styles.barFill,
+                      height: `${(row.count / maxCount) * 100}%`,
+                    }}
+                    title={`${row.date}: ${row.count}`}
+                  />
+                </div>
+                <span style={styles.barLabel}>{row.date}</span>
+                <span style={styles.barCount}>{row.count}</span>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       <div style={styles.filters}>
@@ -155,6 +158,59 @@ const styles: any = {
     padding: "20px",
     borderRadius: "12px",
     marginBottom: "20px",
+  },
+
+  chartEmpty: { color: "#94a3b8", margin: "24px 0" },
+
+  barChart: {
+    display: "flex",
+    alignItems: "flex-end",
+    gap: "12px",
+    minHeight: "220px",
+    paddingTop: "8px",
+    overflowX: "auto",
+  },
+
+  barColumn: {
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    flex: "1 0 56px",
+    minWidth: "56px",
+  },
+
+  barTrack: {
+    width: "100%",
+    height: "160px",
+    background: "#0f172a",
+    borderRadius: "6px",
+    display: "flex",
+    alignItems: "flex-end",
+    overflow: "hidden",
+  },
+
+  barFill: {
+    width: "100%",
+    background: "linear-gradient(180deg, #60a5fa, #2563eb)",
+    borderRadius: "4px 4px 0 0",
+    minHeight: "4px",
+    transition: "height 0.2s ease",
+  },
+
+  barLabel: {
+    fontSize: "10px",
+    color: "#94a3b8",
+    marginTop: "8px",
+    textAlign: "center",
+    wordBreak: "break-word",
+    maxWidth: "72px",
+  },
+
+  barCount: {
+    fontSize: "12px",
+    color: "#e2e8f0",
+    fontWeight: 600,
+    marginTop: "4px",
   },
 
   filters: {

@@ -1,11 +1,12 @@
 import React, { useEffect, useState } from "react";
+import { apiUrl } from "../api";
 
 export default function TutorDashboardPage({ user }: any) {
   const [appointments, setAppointments] = useState<any[]>([]);
   const [message, setMessage] = useState<string>("");
 
   const load = async () => {
-    const res = await fetch("http://localhost:5000/appointments");
+    const res = await fetch(apiUrl("/appointments"));
     const data = await res.json();
 
     if (Array.isArray(data)) {
@@ -21,15 +22,16 @@ export default function TutorDashboardPage({ user }: any) {
 
   const tutorId = user.studentId;
 
-  const mySessions = appointments.filter((a) => a.tutorId == tutorId);
+  const mySessions = appointments.filter(
+    (a) => String(a.tutorId) === String(tutorId)
+  );
 
   const cancelSession = async (id: number) => {
     if (!window.confirm("Cancel this session?")) return;
 
-    const res = await fetch(
-      `http://localhost:5000/appointments/${id}/cancel`,
-      { method: "PUT" }
-    );
+    const res = await fetch(apiUrl(`/appointments/${id}/cancel`), {
+      method: "PUT",
+    });
 
     if (res.ok) {
       setMessage("Session cancelled");

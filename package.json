@@ -2,6 +2,8 @@
   "name": "tutor-service",
   "private": true,
   "scripts": {
+    "api": "npm --prefix backend run start",
+    "start:all": "npm run api & sleep 2 && npm start",
     "dev": "npm --prefix frontend run dev",
     "start": "npm --prefix frontend run start",
     "build": "npm --prefix frontend run build",

@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { apiUrl } from "../api";
 
 export default function StudentBookingPage({ user }: any) {
   const [appointments, setAppointments] = useState<any[]>([]);
@@ -13,8 +14,8 @@ export default function StudentBookingPage({ user }: any) {
   const [mode, setMode] = useState("online");
 
   const load = async () => {
-    const a = await fetch("http://localhost:5000/appointments");
-    const t = await fetch("http://localhost:5000/tutors");
+    const a = await fetch(apiUrl("/appointments"));
+    const t = await fetch(apiUrl("/tutors"));
 
     const ad = await a.json();
     const td = await t.json();
@@ -41,7 +42,7 @@ export default function StudentBookingPage({ user }: any) {
       return;
     }
 
-    const res = await fetch("http://localhost:5000/appointments", {
+    const res = await fetch(apiUrl("/appointments"), {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -73,10 +74,9 @@ export default function StudentBookingPage({ user }: any) {
   const cancel = async (id: number) => {
     if (!window.confirm("Cancel session?")) return;
 
-    const res = await fetch(
-      `http://localhost:5000/appointments/${id}/cancel`,
-      { method: "PUT" }
-    );
+    const res = await fetch(apiUrl(`/appointments/${id}/cancel`), {
+      method: "PUT",
+    });
 
     if (res.ok) {
       setMessage("Session cancelled");

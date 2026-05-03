@@ -1658,3 +1658,13 @@ table {
     filter: brightness(1.15);
   }
 }
+
+/* Login form: keep dark theme when browser autofills fields */
+.login-page input:-webkit-autofill,
+.login-page input:-webkit-autofill:hover,
+.login-page input:-webkit-autofill:focus {
+  -webkit-box-shadow: 0 0 0 1000px #020617 inset !important;
+  -webkit-text-fill-color: #f8fafc !important;
+  caret-color: #f8fafc;
+  transition: background-color 99999s ease-out;
+}
