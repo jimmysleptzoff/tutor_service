@@ -1,147 +1,116 @@
-import type { ReactNode } from "react";
-import { motion, useScroll, useSpring } from "framer-motion";
-import { AlertTriangle, Gauge, ShieldCheck, Sparkles } from "lucide-react";
-import { NavLink, useLocation } from "react-router-dom";
-import type { DemoAlert, DemoRole, DemoScenario } from "../types/scheduling";
+import { ReactNode } from "react";
+import { useNavigate } from "react-router-dom";
 
-type Tab = {
-  to: string;
-  label: string;
-  end?: boolean;
-};
-
-const tabs: Tab[] = [
-  { to: "/", label: "Landing", end: true },
-  { to: "/student", label: "Student" },
-  { to: "/tutor", label: "Tutor" },
-  { to: "/admin", label: "Admin" },
-];
-
-type AppLayoutProps = {
-  role: DemoRole;
-  setRole: (role: DemoRole) => void;
-  scenario: DemoScenario;
-  setScenario: (scenario: DemoScenario) => void;
-  alerts: DemoAlert[];
+type Props = {
   children: ReactNode;
+  role: "student" | "tutor" | "admin";
+  setRole: (role: "student" | "tutor" | "admin") => void;
 };
 
-export default function AppLayout({
-  role,
-  setRole,
-  scenario,
-  setScenario,
-  alerts,
-  children,
-}: AppLayoutProps) {
-  const { scrollYProgress } = useScroll();
-  const location = useLocation();
-  const smoothProgress = useSpring(scrollYProgress, { stiffness: 120, damping: 22, mass: 0.28 });
+export default function AppLayout({ children, role, setRole }: Props) {
+  const navigate = useNavigate();
 
-  const viewLabel = location.pathname === "/" ? "Overview" : role === "student" ? "Student Dashboard" : role === "tutor" ? "Tutor Dashboard" : "Admin Dashboard";
+  const go = (r: "student" | "tutor" | "admin") => {
+    setRole(r);
+    navigate(`/${r}`);
+  };
 
   return (
-    <div className={`app-shell antialiased role-${role}`}>
-      <motion.div className="scroll-progress" style={{ scaleX: smoothProgress }} />
-      <div className="dashboard-frame">
-        <div className="content-wrap">
-          <motion.header
-            className="top-bar ring-1 ring-white/10"
-            initial={{ opacity: 0, y: -8 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.35, ease: "easeOut" }}
-          >
-            <div className="top-head">
-              <p className="brand-inline">Tutoring Scheduler</p>
-              <p className="eyebrow">Operations View</p>
-              <h1 className="view-title">{viewLabel}</h1>
-              <p className="tagline">Track scheduling quality, session readiness, and queue pressure in one place.</p>
-            </div>
-            <div className="top-controls">
-              <label className="role-switch">
-                Active role
-                <select value={role} onChange={(event) => setRole(event.target.value as DemoRole)}>
-                  <option value="student">Student</option>
-                  <option value="tutor">Tutor</option>
-                  <option value="admin">Admin</option>
-                </select>
-              </label>
-              <div className="live-pill">
-                <span className="live-dot" />
-                <span>{role.toUpperCase()} VIEW</span>
-              </div>
-              <div className="status-strip">
-                <span>
-                  <Gauge size={13} />
-                  System healthy
-                </span>
-                <span>
-                  <ShieldCheck size={13} />
-                  Role-safe controls
-                </span>
-              </div>
-            </div>
-          </motion.header>
+    <div style={styles.wrapper}>
+      {/* Header */}
+      <header style={styles.header}>
+        <h1 style={styles.title}>Tutoring Scheduler</h1>
 
-          <motion.nav
-            className="nav-tabs rounded-2xl"
-            initial={{ opacity: 0, y: -4 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.35, delay: 0.05, ease: "easeOut" }}
-          >
-            {tabs.map((tab) => (
-              <NavLink key={tab.to} to={tab.to} end={tab.end}>
-                {tab.label}
-              </NavLink>
-            ))}
-          </motion.nav>
-
-          <section className="demo-command">
-            <article className="surface-card">
-              <div className="panel-header">
-                <h2>Scenario Studio</h2>
-                <span className="chip">Live environment</span>
-              </div>
-              <div className="command-grid">
-                <label className="role-switch">
-                  Demo scenario
-                  <select value={scenario} onChange={(event) => setScenario(event.target.value as DemoScenario)}>
-                    <option value="normal">Normal Week</option>
-                    <option value="finals">Finals Week Surge</option>
-                    <option value="tutor_shortage">Tutor Sick Day</option>
-                  </select>
-                </label>
-                <p className="scenario-copy">
-                  Switch pressure conditions instantly and watch KPIs, queue pressure, and readiness shift
-                  in real time.
-                </p>
-              </div>
-            </article>
-
-            <article className="surface-card">
-              <div className="panel-header">
-                <h2>Live Alerts</h2>
-                <span className="chip">{alerts.length} active</span>
-              </div>
-              <div className="alerts-stack">
-                {alerts.map((alert) => (
-                  <p key={alert.id} className={`alert-pill ${alert.level}`}>
-                    <AlertTriangle size={14} />
-                    {alert.message}
-                  </p>
-                ))}
-              </div>
-            </article>
-          </section>
-
-          <main className="space-y-4 sm:space-y-5">{children}</main>
-
-          <footer className="footer-note">
-            <Sparkles size={14} />
-            <span>Demo mode: {role.toUpperCase()} view active. Booking conflicts are checked automatically.</span>
-          </footer>
+        <div style={styles.nav}>
+          {["student", "tutor", "admin"].map((r) => (
+            <button
+              key={r}
+              style={role === r ? styles.active : styles.button}
+              onClick={() => go(r as any)}
+            >
+              {r.charAt(0).toUpperCase() + r.slice(1)}
+            </button>
+          ))}
         </div>
+      </header>
+
+      {/* Hero Section */}
+      <div style={styles.hero}>
+        <h2 style={styles.heroTitle}>
+          {role === "student" && "Book tutoring sessions in seconds"}
+          {role === "tutor" && "Manage your upcoming sessions"}
+          {role === "admin" && "Oversee and manage all appointments"}
+        </h2>
+
+        <p style={styles.heroSub}>
+          {role === "student" && "Choose a course, select a tutor, and schedule instantly."}
+          {role === "tutor" && "View sessions, take notes, and stay organized."}
+          {role === "admin" && "Monitor, cancel, and manage scheduling across the system."}
+        </p>
       </div>
+
+      {/* Content */}
+      <main style={styles.main}>{children}</main>
     </div>
   );
 }
+
+const styles = {
+  wrapper: {
+    minHeight: "100vh",
+    background: "linear-gradient(135deg, #1e2a55, #0f172a)",
+    color: "white",
+  },
+  header: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    padding: "18px 40px",
+    background: "#020617",
+    borderBottom: "1px solid #1e293b",
+  },
+  title: {
+    fontSize: "20px",
+    fontWeight: "600",
+  },
+  nav: {
+    display: "flex",
+    gap: "10px",
+  },
+  button: {
+    background: "#1e293b",
+    color: "#cbd5f5",
+    border: "none",
+    padding: "8px 14px",
+    borderRadius: "6px",
+    cursor: "pointer",
+  },
+  active: {
+    background: "#3b82f6",
+    color: "white",
+    border: "none",
+    padding: "8px 14px",
+    borderRadius: "6px",
+    cursor: "pointer",
+  },
+
+  hero: {
+    textAlign: "center" as const,
+    marginTop: "50px",
+    marginBottom: "20px",
+  },
+  heroTitle: {
+    fontSize: "26px",
+    fontWeight: "600",
+  },
+  heroSub: {
+    color: "#94a3b8",
+    marginTop: "8px",
+  },
+
+  main: {
+    display: "flex",
+    justifyContent: "center",
+    marginTop: "20px",
+  },
+};

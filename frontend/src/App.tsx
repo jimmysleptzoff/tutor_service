@@ -1,90 +1,142 @@
 import "./App.css";
 import { useEffect, useState } from "react";
-import { Navigate, Route, Routes, useLocation, useNavigate } from "react-router-dom";
-import AppLayout from "./components/AppLayout";
-import AdminOpsPage from "./pages/AdminOpsPage";
-import LandingPage from "./pages/LandingPage";
+import { Routes, Route, Navigate, useNavigate } from "react-router-dom";
+
+import LoginPage from "./pages/LoginPage";
 import StudentBookingPage from "./pages/StudentBookingPage";
 import TutorDashboardPage from "./pages/TutorDashboardPage";
-import type { DemoAlert, DemoRole, DemoScenario } from "./types/scheduling";
+import AdminOpsPage from "./pages/AdminOpsPage";
 
-const roleToPath: Record<DemoRole, string> = {
-  student: "/student",
-  tutor: "/tutor",
-  admin: "/admin",
-};
-
-const pathToRole: Record<string, DemoRole> = {
-  "/student": "student",
-  "/tutor": "tutor",
-  "/admin": "admin",
-};
-
-const scenarioAlerts: Record<DemoScenario, DemoAlert[]> = {
-  normal: [
-    { id: "a1", level: "info", message: "Booking flow latency is stable under 1 second." },
-    { id: "a2", level: "success", message: "No conflicts detected across current session windows." },
-    { id: "a3", level: "warning", message: "CHEM115 queue is trending upward for tomorrow." },
-  ],
-  finals: [
-    { id: "a4", level: "warning", message: "Finals week demand spike: 42% more booking attempts." },
-    { id: "a5", level: "warning", message: "MATH155 waitlist crossed escalation threshold." },
-    { id: "a6", level: "success", message: "Auto-assignment reroutes saved 11 at-risk sessions." },
-  ],
-  tutor_shortage: [
-    { id: "a7", level: "danger", message: "Two tutors marked unavailable in the next 24 hours." },
-    { id: "a8", level: "warning", message: "CS110 utilization at 96%, backup coverage recommended." },
-    { id: "a9", level: "success", message: "Priority queue policy reduced expected churn by 18%." },
-  ],
-};
-
-function App() {
-  const [role, setRole] = useState<DemoRole>("student");
-  const [scenario, setScenario] = useState<DemoScenario>("normal");
-
+export default function App() {
+  const [user, setUser] = useState<any>(null);
   const navigate = useNavigate();
-  const location = useLocation();
 
   useEffect(() => {
-    const routeRole = pathToRole[location.pathname];
-    if (routeRole && routeRole !== role) {
-      setRole(routeRole);
+    const saved = localStorage.getItem("user");
+    if (saved) {
+      setUser(JSON.parse(saved));
     }
-  }, [location.pathname, role]);
+  }, []);
 
-  function handleRoleChange(nextRole: DemoRole) {
-    setRole(nextRole);
-    const nextPath = roleToPath[nextRole];
-    if (location.pathname !== nextPath) {
-      navigate(nextPath);
-    }
-  }
+  const logout = () => {
+    localStorage.removeItem("user");
+    setUser(null);
+    navigate("/");
+  };
+
+  const getDashboard = () => {
+    if (!user) return <Navigate to="/" />;
+
+    if (user.role === "student") return <StudentBookingPage user={user} />;
+    if (user.role === "tutor") return <TutorDashboardPage user={user} />;
+    if (user.role === "admin") return <AdminOpsPage user={user} />;
+
+    return <Navigate to="/" />;
+  };
 
   return (
-    <AppLayout
-      role={role}
-      setRole={handleRoleChange}
-      scenario={scenario}
-      setScenario={setScenario}
-      alerts={scenarioAlerts[scenario]}
-    >
-      <Routes>
-        <Route path="/" element={<LandingPage />} />
+    <div style={styles.app}>
+      {user && (
+        <div style={styles.sidebar}>
+          <h2 style={{ marginBottom: "30px" }}>Scheduler</h2>
 
-        {/* remove scenario */}
-        <Route
-  path="/student"
-  element={<StudentBookingPage scenario={scenario} />}
-/>
+        <button style={styles.navBtn} onClick={() => navigate("/dashboard")}>
+          {user?.role === "student" && "My Sessions"}
+          {user?.role === "tutor" && "My Schedule"}
+          {user?.role === "admin" && "All Appointments"}
+        </button>
 
-        <Route path="/tutor" element={<TutorDashboardPage />} />
-        <Route path="/admin" element={<AdminOpsPage />} />
+          <button style={styles.logout} onClick={logout}>
+            Logout
+          </button>
+        </div>
+      )}
 
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
-    </AppLayout>
+      <div style={styles.main}>
+        <div style={styles.topbar}>
+          {user && (
+            <span>
+              {user.firstName} ({user.role})
+            </span>
+          )}
+        </div>
+
+        <div style={styles.content}>
+          <Routes>
+            <Route
+              path="/"
+              element={
+                <LoginPage
+                  setUser={(u: any) => {
+                    setUser(u);
+                    localStorage.setItem("user", JSON.stringify(u));
+                    navigate("/dashboard");
+                  }}
+                />
+              }
+            />
+
+            <Route path="/dashboard" element={getDashboard()} />
+            <Route path="*" element={<Navigate to="/" />} />
+          </Routes>
+        </div>
+      </div>
+    </div>
   );
 }
 
+const styles: any = {
+  app: {
+    display: "flex",
+    minHeight: "100vh",
+    background: "#020617",
+    color: "white",
+  },
 
-export default App;
+  sidebar: {
+    width: "220px",
+    background: "#0f172a",
+    padding: "20px",
+    display: "flex",
+    flexDirection: "column",
+    gap: "10px",
+  },
+
+  navBtn: {
+    background: "#1e293b",
+    border: "none",
+    padding: "10px",
+    borderRadius: "6px",
+    color: "white",
+    cursor: "pointer",
+  },
+
+  logout: {
+    marginTop: "auto",
+    background: "#ef4444",
+    border: "none",
+    padding: "10px",
+    borderRadius: "6px",
+    color: "white",
+    cursor: "pointer",
+  },
+
+  main: {
+    flex: 1,
+    display: "flex",
+    flexDirection: "column",
+  },
+
+  topbar: {
+    height: "60px",
+    borderBottom: "1px solid #1e293b",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "flex-end",
+    padding: "0 20px",
+  },
+
+  content: {
+    padding: "30px",
+  },
+};

@@ -18,6 +18,64 @@ db.connect(err => {
   else console.log("MySQL connected");
 });
 
+
+// ================= USERS (LOGIN SYSTEM) =================
+
+// GET USER (LOGIN)
+app.get("/users/:studentId", (req, res) => {
+  const studentId = Number(req.params.studentId); // 🔥 FORCE NUMBER
+
+  const sql = "SELECT * FROM users WHERE studentId = ?";
+
+  db.query(sql, [studentId], (err, result) => {
+    if (err) return res.status(500).json(err);
+
+    if (result.length === 0) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    res.json(result[0]);
+  });
+});
+
+// CREATE USER (SIGNUP)
+app.post("/users", (req, res) => {
+  const studentId = Number(req.body.studentId);
+  const { firstName, lastName, email, role } = req.body;
+
+  db.query(
+    "SELECT * FROM users WHERE studentId = ?",
+    [studentId],
+    (err, result) => {
+      if (result.length > 0) {
+        return res.status(400).json({ message: "User already exists" });
+      }
+
+      const sql = `
+        INSERT INTO users (studentId, firstName, lastName, email, role)
+        VALUES (?, ?, ?, ?, ?)
+      `;
+
+      db.query(
+        sql,
+        [studentId, firstName, lastName, email, role],
+        err => {
+          if (err) return res.status(500).json(err);
+
+          res.json({
+            studentId,
+            firstName,
+            lastName,
+            email,
+            role,
+          });
+        }
+      );
+    }
+  );
+});
+
+
 // ================= GET APPOINTMENTS =================
 app.get("/appointments", (req, res) => {
   const sql = `
@@ -29,6 +87,8 @@ app.get("/appointments", (req, res) => {
       a.startDateTime,
       a.status,
       a.notes,
+      a.location,
+      a.mode,
       t.name AS tutorName
     FROM appointment_info a
     JOIN tutor t ON a.tutorId = t.tutorId
@@ -41,20 +101,64 @@ app.get("/appointments", (req, res) => {
   });
 });
 
-// ================= CREATE =================
+
+// ================= CREATE APPOINTMENT =================
 app.post("/appointments", (req, res) => {
-  const { studentId, tutorId, courseNum, startDateTime } = req.body;
+  const {
+    studentId,
+    tutorId,
+    courseNum,
+    startDateTime,
+    notes,
+    location,
+    mode,
+  } = req.body;
 
-  const sql = `
-    INSERT INTO appointment_info
-    (studentId, tutorId, courseNum, startDateTime, lengthMinutes, location, status)
-    VALUES (?, ?, ?, ?, 60, 'Online', 'scheduled')
-  `;
+  if (!studentId || !tutorId || !courseNum || !startDateTime) {
+    return res.status(400).json({ message: "Missing required fields" });
+  }
 
-  db.query(sql, [studentId, tutorId, courseNum, startDateTime], err => {
-    if (err) return res.status(500).send(err);
-    res.json({ success: true });
-  });
+  // check conflict (same tutor + same time)
+  db.query(
+    "SELECT * FROM appointment_info WHERE tutorId = ? AND startDateTime = ? AND status != 'cancelled'",
+    [tutorId, startDateTime],
+    (err, result) => {
+      if (err) {
+        console.error(err);
+        return res.status(500).send(err);
+      }
+
+      if (result.length > 0) {
+        return res
+          .status(400)
+          .json({ message: "Tutor already booked at this time" });
+      }
+
+      // insert if no conflict
+      db.query(
+        `INSERT INTO appointment_info
+        (studentId, tutorId, courseNum, startDateTime, lengthMinutes, location, status, notes, mode)
+        VALUES (?, ?, ?, ?, 60, ?, 'scheduled', ?, ?)`,
+        [
+          Number(studentId),
+          Number(tutorId),
+          courseNum,
+          startDateTime,
+          location || "Online",
+          notes || "",
+          mode || "online",
+        ],
+        (err) => {
+          if (err) {
+            console.error(err);
+            return res.status(500).send(err);
+          }
+
+          res.json({ success: true });
+        }
+      );
+    }
+  );
 });
 
 // ================= DELETE =================
@@ -69,6 +173,7 @@ app.delete("/appointments/:id", (req, res) => {
   );
 });
 
+
 // ================= CANCEL =================
 app.put("/appointments/:id/cancel", (req, res) => {
   db.query(
@@ -81,7 +186,8 @@ app.put("/appointments/:id/cancel", (req, res) => {
   );
 });
 
-// ================= NOTES =================
+
+// ================= UPDATE NOTES =================
 app.put("/appointments/:id/notes", (req, res) => {
   const { notes } = req.body;
 
@@ -95,6 +201,7 @@ app.put("/appointments/:id/notes", (req, res) => {
   );
 });
 
+
 // ================= GET TUTORS =================
 app.get("/tutors", (req, res) => {
   db.query("SELECT * FROM tutor", (err, results) => {
@@ -102,5 +209,6 @@ app.get("/tutors", (req, res) => {
     res.json(results);
   });
 });
+
 
 app.listen(5000, () => console.log("Server running on port 5000"));
