@@ -1,2 +1,17 @@
+# --- Dependencies & OS ---
+node_modules/
+**/node_modules/
+.DS_Store
+
+# --- Secrets (never commit real credentials) ---
+backend/.env
+.env
+.env.local
+.env.*.local
+
+# --- Build output ---
+frontend/build
+build/
+dist/
 
 reference_tutoring_440/

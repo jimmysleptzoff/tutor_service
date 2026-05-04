@@ -2,6 +2,8 @@
   "name": "frontend",
   "version": "0.1.0",
   "private": true,
+  "description": "CRA dev server proxies API calls to backend default port — keep in sync with backend PORT / backend/.env.example",
+  "proxy": "http://127.0.0.1:5001",
   "dependencies": {
     "@react-three/drei": "^10.7.7",
     "@react-three/fiber": "^9.6.0",

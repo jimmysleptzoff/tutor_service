@@ -1,6 +1,7 @@
 {
   "name": "tutor-service",
   "private": true,
+  "description": "Monorepo scripts: run API + UI for class demos. Copy backend/.env.example → backend/.env before first run; do not commit .env.",
   "scripts": {
     "api": "npm --prefix backend run start",
     "start:all": "npm run api & sleep 2 && npm start",
