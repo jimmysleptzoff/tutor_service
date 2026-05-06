@@ -177,7 +177,7 @@ export default function StudentBookingPage({ user }: any) {
 
   const downloadSessionsIcs = () => {
     const ics = buildStudentSessionsIcs(exportableSessions, "My tutoring sessions");
-    const safe = (user.firstName || "student").replace(/[^\w\-]+/g, "-");
+    const safe = (user.firstName || "student").replace(/[^\w-]+/g, "-");
     downloadTextFile(ics, `tutor-sessions-${safe}.ics`, "text/calendar;charset=utf-8");
   };
 

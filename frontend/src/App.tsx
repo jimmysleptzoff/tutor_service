@@ -288,18 +288,14 @@ export default function App() {
               minHeight: scale !== 1 ? `${100 / scale}%` : undefined,
             }}
           >
-            <div
-              style={{
-                ...styles.topbar,
-                ...(isMobile ? styles.topbarMobile : {}),
-                ...(user
-                  ? {
-                      boxShadow: `0 8px 28px rgba(2, 6, 23, 0.25), inset 0 -1px 0 ${roleTheme.railSoft}`,
-                    }
-                  : {}),
-              }}
-            >
-              {user && (
+            {user && (
+              <div
+                style={{
+                  ...styles.topbar,
+                  ...(isMobile ? styles.topbarMobile : {}),
+                  boxShadow: `0 8px 28px rgba(2, 6, 23, 0.25), inset 0 -1px 0 ${roleTheme.railSoft}`,
+                }}
+              >
                 <motion.span
                   whileHover={{ y: -1, scale: 1.02 }}
                   transition={{ type: "spring", stiffness: 420, damping: 28 }}
@@ -314,10 +310,16 @@ export default function App() {
                   {user.firstName}
                   <span style={styles.userPillRole}>· {user.role}</span>
                 </motion.span>
-              )}
-            </div>
+              </div>
+            )}
 
-            <div style={{ ...styles.content, ...(isMobile ? styles.contentMobile : {}) }}>
+            <div
+              style={{
+                ...styles.content,
+                ...(isMobile ? styles.contentMobile : {}),
+                ...(!user ? styles.contentAuth : {}),
+              }}
+            >
               <Routes>
                 <Route
                   path="/"
@@ -561,6 +563,16 @@ const styles: any = {
   },
   contentMobile: {
     padding: "14px 12px 18px",
+  },
+  // When signed out, center the auth card in the available viewport.
+  contentAuth: {
+    minHeight: "100vh",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    margin: "0 auto",
+    width: "100%",
+    maxWidth: "100%",
   },
 
   userPill: {

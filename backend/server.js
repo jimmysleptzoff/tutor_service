@@ -29,7 +29,7 @@ function dbFriendlyMessage(err) {
   if (code === "ECONNREFUSED") {
     return "Cannot connect to MySQL. Start MySQL (default port 3306), then try again.";
   }
-  if (code === "ER_ACCESS_DENIED_ERROR") {
+  if (code === "ER_ACCESS_DENIED_ERROR" || String(code || "").includes("ACCESS_DENIED")) {
     return "MySQL rejected the login. Check DB_USER and DB_PASSWORD in backend/.env.";
   }
   if (code === "ER_BAD_DB_ERROR") {

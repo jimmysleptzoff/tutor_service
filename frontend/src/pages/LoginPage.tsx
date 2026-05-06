@@ -35,10 +35,22 @@ function networkErrorMessage(): string {
 
 function apiErrorMessage(body: unknown, fallback: string): string {
   if (body == null) return fallback;
-  if (typeof body === "string" && body.trim()) return body.trim();
+  if (typeof body === "string" && body.trim()) {
+    const msg = body.trim();
+    if (msg.toLowerCase().includes("access denied for user")) {
+      return "Database credentials are wrong in backend/.env. Update DB_USER / DB_PASSWORD, restart API, then try again.";
+    }
+    return msg;
+  }
   if (typeof body !== "object") return fallback;
   const o = body as Record<string, unknown>;
-  if (typeof o.message === "string" && o.message.trim()) return o.message.trim();
+  if (typeof o.message === "string" && o.message.trim()) {
+    const msg = o.message.trim();
+    if (msg.toLowerCase().includes("access denied for user")) {
+      return "Database credentials are wrong in backend/.env. Update DB_USER / DB_PASSWORD, restart API, then try again.";
+    }
+    return msg;
+  }
   if (typeof o.sqlMessage === "string" && o.sqlMessage.trim()) return o.sqlMessage.trim();
   if (typeof o.error === "string" && o.error.trim()) return o.error.trim();
   return fallback;
