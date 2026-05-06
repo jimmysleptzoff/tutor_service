@@ -53,6 +53,29 @@ import {
   Zap,
 } from "lucide-react";
 
+/**
+ * Accepts both:
+ * - native `datetime-local` values: `YYYY-MM-DDTHH:mm`
+ * - locale-rendered date strings some browsers emit in UI copy/paste flows.
+ * Returns a stable local datetime string for backend inserts.
+ */
+function normalizeStartDateTime(raw: string): string | null {
+  const value = String(raw || "").trim();
+  if (!value) return null;
+  if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(value)) {
+    return value.slice(0, 16);
+  }
+
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return null;
+  const yyyy = parsed.getFullYear();
+  const mm = String(parsed.getMonth() + 1).padStart(2, "0");
+  const dd = String(parsed.getDate()).padStart(2, "0");
+  const hh = String(parsed.getHours()).padStart(2, "0");
+  const min = String(parsed.getMinutes()).padStart(2, "0");
+  return `${yyyy}-${mm}-${dd}T${hh}:${min}`;
+}
+
 export default function StudentBookingPage({ user }: any) {
   const [isCompact, setIsCompact] = useState(false);
   const [appointments, setAppointments] = useState<any[]>([]);
@@ -135,9 +158,13 @@ export default function StudentBookingPage({ user }: any) {
 
   const book = async () => {
     setMessage("");
-
-    if (!course || !tutorId || !time) {
-      setMessage("Fill required fields");
+    const normalizedStart = normalizeStartDateTime(time);
+    const missing: string[] = [];
+    if (!course) missing.push("course");
+    if (!tutorId) missing.push("tutor");
+    if (!normalizedStart) missing.push("date/time");
+    if (missing.length) {
+      setMessage(`Fill required fields: ${missing.join(", ")}`);
       return;
     }
 
@@ -148,7 +175,7 @@ export default function StudentBookingPage({ user }: any) {
         studentId: user.studentId,
         tutorId: Number(tutorId),
         courseNum: course,
-        startDateTime: time,
+        startDateTime: normalizedStart,
         notes,
         location,
         mode,

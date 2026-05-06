@@ -71,6 +71,8 @@ export default function LoginPage({ setUser }: any) {
   const [mode, setMode] = useState<"login" | "signup">("login");
   const [role, setRole] = useState("student");
   const [studentId, setStudentId] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [email, setEmail] = useState("");
@@ -96,15 +98,19 @@ export default function LoginPage({ setUser }: any) {
 
     setLoading(true);
     try {
-      const res = await fetch(apiUrl(`/users/${encodeURIComponent(id)}`));
+      const res = await fetch(apiUrl("/auth/login"), {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          studentId: Number(id),
+          role,
+          password,
+        }),
+      });
 
       if (!res.ok) {
         const errBody = await readJsonBody(res);
-        if (res.status === 404) {
-          setError("No account found for that ID. Try Sign up or check the role.");
-        } else {
-          setError(apiErrorMessage(errBody, `Login failed (HTTP ${res.status}).`));
-        }
+        setError(apiErrorMessage(errBody, `Login failed (HTTP ${res.status}).`));
         return;
       }
 
@@ -112,12 +118,6 @@ export default function LoginPage({ setUser }: any) {
       const normalized = normalizeSessionUser(data);
       if (!normalized) {
         setError("The server returned an unexpected profile. Ask your TA or check the database row.");
-        return;
-      }
-
-      // Compare case-insensitively — DB text casing can drift from the select value.
-      if (String(normalized.role).toLowerCase() !== role.trim().toLowerCase()) {
-        setError("That ID exists, but the role doesn't match. Pick the correct role above.");
         return;
       }
 
@@ -140,6 +140,14 @@ export default function LoginPage({ setUser }: any) {
       setError("Fill in first name, last name, and email.");
       return;
     }
+    if (password.length < 8) {
+      setError("Password must be at least 8 characters.");
+      return;
+    }
+    if (password !== confirmPassword) {
+      setError("Passwords do not match.");
+      return;
+    }
 
     setLoading(true);
     try {
@@ -152,6 +160,7 @@ export default function LoginPage({ setUser }: any) {
           lastName: lastName.trim(),
           email: email.trim(),
           role,
+          password,
         }),
       });
 
@@ -196,8 +205,8 @@ export default function LoginPage({ setUser }: any) {
           <h1 style={styles.title}>{mode === "login" ? "Sign in" : "Create account"}</h1>
           <p style={styles.subtitle}>
             {mode === "login"
-              ? "Use your numeric student ID and the role that matches your account."
-              : "Create your profile once, then sign in anytime with the same ID."}
+              ? "Use student ID, role, and your password."
+              : "Create your profile once, set a password, then sign in anytime."}
           </p>
           <div style={styles.badges}>
             <span style={styles.badge}>
@@ -227,6 +236,8 @@ export default function LoginPage({ setUser }: any) {
                 }}
                 onClick={() => {
                   setMode("login");
+                  setPassword("");
+                  setConfirmPassword("");
                   setError("");
                 }}
               >
@@ -240,6 +251,8 @@ export default function LoginPage({ setUser }: any) {
                 }}
                 onClick={() => {
                   setMode("signup");
+                  setPassword("");
+                  setConfirmPassword("");
                   setError("");
                 }}
               >
@@ -269,6 +282,18 @@ export default function LoginPage({ setUser }: any) {
                 autoComplete="username"
                 value={studentId}
                 onChange={(e) => setStudentId(e.target.value)}
+              />
+            </label>
+
+            <label style={styles.label}>
+              Password
+              <input
+                style={styles.input}
+                type="password"
+                placeholder={mode === "login" ? "Enter password" : "Create password"}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                autoComplete={mode === "login" ? "current-password" : "new-password"}
               />
             </label>
 
@@ -303,6 +328,17 @@ export default function LoginPage({ setUser }: any) {
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     autoComplete="email"
+                  />
+                </label>
+                <label style={styles.label}>
+                  Confirm password
+                  <input
+                    style={styles.input}
+                    type="password"
+                    placeholder="Re-enter password"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    autoComplete="new-password"
                   />
                 </label>
               </>

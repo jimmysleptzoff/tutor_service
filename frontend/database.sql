@@ -6,7 +6,8 @@ CREATE TABLE users (
   firstName VARCHAR(50),
   lastName VARCHAR(50),
   email VARCHAR(100),
-  role VARCHAR(20)
+  role VARCHAR(20),
+  passwordHash VARCHAR(255)
 );
 
 CREATE TABLE tutor (
