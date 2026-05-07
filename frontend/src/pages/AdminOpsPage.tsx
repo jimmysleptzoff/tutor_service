@@ -37,6 +37,7 @@ import {
 export default function AdminOpsPage({ user }: any) {
   const [isCompact, setIsCompact] = useState(false);
   const [appointments, setAppointments] = useState<any[]>([]);
+  const [courseTotals, setCourseTotals] = useState<any[]>([]);
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -45,9 +46,14 @@ export default function AdminOpsPage({ user }: any) {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await fetch(apiUrl("/appointments"));
-      const data = await res.json();
-      setAppointments(Array.isArray(data) ? data : []);
+      const [appointmentsRes, totalsRes] = await Promise.all([
+        fetch(apiUrl("/appointments")),
+        fetch(apiUrl("/reports/appointments-by-course")),
+      ]);
+      const appointmentsData = await appointmentsRes.json();
+      const totalsData = await totalsRes.json().catch(() => []);
+      setAppointments(Array.isArray(appointmentsData) ? appointmentsData : []);
+      setCourseTotals(Array.isArray(totalsData) ? totalsData : []);
     } finally {
       setLoading(false);
     }
@@ -276,6 +282,39 @@ export default function AdminOpsPage({ user }: any) {
                 <span style={styles.barLabel}>{row.date}</span>
                 <span style={styles.barCount}>{row.count}</span>
               </motion.div>
+            ))}
+          </div>
+        )}
+      </motion.div>
+
+      <motion.div variants={dashboardItemVariants} style={styles.courseTotalsCard}>
+        <div style={styles.cardHead}>
+          <div>
+            <h2 style={styles.cardTitle}>Appointments by course</h2>
+            <p style={styles.cardSubtitle}>Live aggregate from the `/reports/appointments-by-course` endpoint.</p>
+          </div>
+          <span style={styles.cardChipMuted}>{courseTotals.length} courses</span>
+        </div>
+        {loading ? (
+          <div style={styles.skeletonStack}>
+            {[0, 1, 2].map((i) => (
+              <motion.div
+                key={i}
+                style={styles.skeletonLine}
+                animate={{ opacity: [0.35, 0.65, 0.35] }}
+                transition={{ duration: 1.2, repeat: Infinity, delay: i * 0.1 }}
+              />
+            ))}
+          </div>
+        ) : courseTotals.length === 0 ? (
+          <p style={styles.chartEmpty}>No aggregated rows yet. Create appointments to populate this view.</p>
+        ) : (
+          <div style={styles.courseTotalsList}>
+            {courseTotals.map((row) => (
+              <div key={row.courseNum} style={styles.courseTotalRow}>
+                <span style={styles.courseTotalCourse}>{row.courseNum}</span>
+                <span style={styles.courseTotalCount}>{row.totalAppointments}</span>
+              </div>
             ))}
           </div>
         )}
@@ -646,6 +685,16 @@ const styles: any = {
     marginBottom: "18px",
     boxShadow: "0 20px 48px rgba(2,6,23,0.45), inset 0 1px 0 rgba(255,255,255,0.04)",
   },
+  courseTotalsCard: {
+    position: "relative",
+    zIndex: 1,
+    borderRadius: "20px",
+    border: "1px solid rgba(196,181,253,0.16)",
+    background: "linear-gradient(180deg, rgba(30,27,55,0.75) 0%, rgba(15,23,42,0.9) 100%)",
+    padding: "22px",
+    marginBottom: "18px",
+    boxShadow: "0 20px 48px rgba(2,6,23,0.45), inset 0 1px 0 rgba(255,255,255,0.04)",
+  },
   cardHead: {
     display: "flex",
     justifyContent: "space-between",
@@ -756,6 +805,29 @@ const styles: any = {
     color: "#e9d5ff",
     fontWeight: 700,
     marginTop: "4px",
+  },
+  courseTotalsList: {
+    display: "flex",
+    flexDirection: "column",
+    gap: "8px",
+  },
+  courseTotalRow: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    border: "1px solid rgba(71,85,105,0.45)",
+    borderRadius: "10px",
+    padding: "10px 12px",
+    background: "rgba(2,6,23,0.4)",
+  },
+  courseTotalCourse: {
+    color: "#e9d5ff",
+    fontWeight: 700,
+    letterSpacing: "0.02em",
+  },
+  courseTotalCount: {
+    color: "#c4b5fd",
+    fontWeight: 800,
   },
 
   filterBar: {

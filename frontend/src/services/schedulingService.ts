@@ -1,15 +1,5 @@
-import { appointments, slots, tutors, waitlist } from "../data/mockData";
-import type { Appointment, BookingInput, Slot, Tutor, WaitlistEntry } from "../types/scheduling";
-
-export function getTutorsForCourse(courseNum: string): Tutor[] {
-  if (!courseNum) return tutors;
-  return tutors.filter((tutor) => tutor.courseNums.includes(courseNum));
-}
-
-export function getSlotsForTutor(tutorId: string): Slot[] {
-  if (!tutorId) return slots;
-  return slots.filter((slot) => slot.tutorId === tutorId);
-}
+import { slots, tutors } from "../data/mockData";
+import type { BookingInput } from "../types/scheduling";
 
 export function formatBookingMessage({ courseNum, tutorId, slotId }: BookingInput): string {
   const tutor = tutors.find((item) => item.id === tutorId);
@@ -28,12 +18,4 @@ export function formatBookingMessage({ courseNum, tutorId, slotId }: BookingInpu
   }
 
   return `Booked ${courseNum} with ${tutor.name} at ${slot.start}. Conflict risk: 0%.`;
-}
-
-export function getTutorUpcomingSessions(): Appointment[] {
-  return appointments.filter((appointment) => appointment.status === "Scheduled");
-}
-
-export function getAdminWaitlist(): WaitlistEntry[] {
-  return [...waitlist].sort((a, b) => b.priority - a.priority);
 }

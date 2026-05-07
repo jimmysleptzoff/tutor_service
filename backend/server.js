@@ -1,16 +1,3 @@
-/**
- * Tutor Service — Express API (group project)
- * ------------------------------------------
- * What this file does:
- * - Loads MySQL config from `backend/.env` (see `.env.example` in this folder — copy to `.env`).
- * - Exposes REST routes for users (login/signup), appointments (CRUD-ish), tutors list, cancel/delete.
- * - Returns **JSON** with `{ message: "..." }` on errors so the React app can show friendly text.
- *
- * Ops notes we fixed during the project:
- * - Default **PORT 5001** (macOS often uses 5000 for AirPlay — avoids silent clashes).
- * - Listens on **0.0.0.0** so LAN devices can hit the API during demos.
- * - `dbFriendlyMessage` maps MySQL error codes to actionable hints for classmates grading the stack.
- */
 require("dotenv").config();
 
 const express = require("express");
@@ -47,51 +34,40 @@ const db = mysql.createPool({
   /** Must be MySQL port (3306), not the Express API port — a common mix-up we documented in .env.example */
   port: Number(process.env.DB_PORT || 3306),
   user: process.env.DB_USER || "root",
-  password: process.env.DB_PASSWORD || "root",
+  password: process.env.DB_PASSWORD || "",
   database: process.env.DB_NAME || "tutorScheduler",
   waitForConnections: true,
   connectionLimit: 10,
   queueLimit: 0,
 });
 
-function toPublicUser(row) {
+function toPublicUser(row, role, idField) {
   if (!row) return null;
   return {
-    studentId: Number(row.studentId),
+    studentId: Number(row[idField]),
     firstName: row.firstName,
     lastName: row.lastName,
     email: row.email,
-    role: String(row.role || "").toLowerCase(),
+    role: String(role || "").toLowerCase(),
   };
 }
 
-// Backward-safe migration for existing local DBs created before password auth.
-// Some MySQL variants don't support `ADD COLUMN IF NOT EXISTS`, so we check first.
-db.query("SHOW COLUMNS FROM users LIKE 'passwordHash'", (checkErr, rows) => {
-  if (checkErr) {
-    console.error("users.passwordHash check failed:", checkErr.message || checkErr);
-    return;
-  }
-
-  if (Array.isArray(rows) && rows.length > 0) return;
-
-  db.query("ALTER TABLE users ADD COLUMN passwordHash VARCHAR(255) NULL", (alterErr) => {
-    if (alterErr) {
-      console.error("users.passwordHash migration failed:", alterErr.message || alterErr);
-    } else {
-      console.log("Applied migration: users.passwordHash");
-    }
-  });
-});
+function authConfig(role) {
+  const normalized = String(role || "").toLowerCase();
+  if (normalized === "student") return { table: "student", idField: "studentId", role: "student" };
+  if (normalized === "tutor") return { table: "tutor", idField: "tutorId", role: "tutor" };
+  if (normalized === "admin") return { table: "admin", idField: "adminId", role: "admin" };
+  return null;
+}
 
 
-// ================= USERS (LOGIN SYSTEM) =================
+// ================= AUTH + ACCOUNT LOOKUPS =================
 
-// GET USER (legacy lookup for debug/admin; does NOT return passwordHash)
+// Student profile lookup used by the UI shell; never returns password hash.
 app.get("/users/:studentId", (req, res) => {
   const studentId = Number(req.params.studentId);
 
-  const sql = "SELECT studentId, firstName, lastName, email, role FROM users WHERE studentId = ?";
+  const sql = "SELECT studentId, firstName, lastName, email FROM student WHERE studentId = ?";
 
   db.query(sql, [studentId], (err, result) => {
     if (err) {
@@ -105,23 +81,24 @@ app.get("/users/:studentId", (req, res) => {
       return res.status(404).json({ message: "User not found" });
     }
 
-    res.json(toPublicUser(result[0]));
+    res.json(toPublicUser(result[0], "student", "studentId"));
   });
 });
 
-// AUTH LOGIN (studentId + role + password)
+// Login supports all three account tables; "role" determines where we authenticate.
 app.post("/auth/login", (req, res) => {
   const { studentId: rawStudentId, role: rawRole, password } = req.body || {};
-  const studentId = Number(rawStudentId);
+  const loginId = Number(rawStudentId);
   const role = String(rawRole || "").toLowerCase().trim();
+  const cfg = authConfig(role);
 
-  if (!Number.isFinite(studentId) || !role || !password) {
-    return res.status(400).json({ message: "Student ID, role, and password are required." });
+  if (!Number.isFinite(loginId) || !cfg || !password) {
+    return res.status(400).json({ message: "Valid ID, role, and password are required." });
   }
 
   db.query(
-    "SELECT studentId, firstName, lastName, email, role, passwordHash FROM users WHERE studentId = ?",
-    [studentId],
+    `SELECT ${cfg.idField}, firstName, lastName, email, passwordHash FROM ${cfg.table} WHERE ${cfg.idField} = ?`,
+    [loginId],
     async (err, result) => {
       if (err) {
         console.error(err);
@@ -132,14 +109,9 @@ app.post("/auth/login", (req, res) => {
       }
 
       const user = result[0];
-      if (String(user.role || "").toLowerCase() !== role) {
-        return res.status(401).json({ message: "Invalid credentials." });
-      }
-
       if (!user.passwordHash) {
         return res.status(400).json({
-          message:
-            "This account has no password yet. Please sign up again with a password to migrate it.",
+          message: "This account has no passwordHash in the database.",
         });
       }
 
@@ -148,14 +120,14 @@ app.post("/auth/login", (req, res) => {
         return res.status(401).json({ message: "Invalid credentials." });
       }
 
-      return res.json(toPublicUser(user));
+      return res.json(toPublicUser(user, cfg.role, cfg.idField));
     }
   );
 });
 
-// CREATE USER (SIGNUP)
+// Self-serve signup is student-only.
 app.post("/users", (req, res) => {
-  const { firstName, lastName, email, role, password } = req.body;
+  const { firstName, lastName, email, password } = req.body;
   const rawStudentId = req.body.studentId;
 
   if (rawStudentId === undefined || rawStudentId === null || String(rawStudentId).trim() === "") {
@@ -167,15 +139,15 @@ app.post("/users", (req, res) => {
     return res.status(400).json({ message: "Student ID must be a valid number" });
   }
 
-  if (!firstName || !lastName || !email || !role || !password) {
-    return res.status(400).json({ message: "First name, last name, email, role, and password are required" });
+  if (!firstName || !lastName || !email || !password) {
+    return res.status(400).json({ message: "First name, last name, email, and password are required" });
   }
   if (String(password).length < 8) {
     return res.status(400).json({ message: "Password must be at least 8 characters." });
   }
 
   db.query(
-    "SELECT * FROM users WHERE studentId = ?",
+    "SELECT * FROM student WHERE studentId = ?",
     [studentId],
     (err, result) => {
       if (err) {
@@ -187,38 +159,7 @@ app.post("/users", (req, res) => {
 
       if (result.length > 0) {
         const existing = result[0];
-        if (existing.passwordHash) {
-          return res.status(400).json({ message: "An account with this student ID already exists. Use Login instead." });
-        }
-
-        // Migration path: legacy rows created before passwords can be upgraded in-place.
-        return bcrypt.hash(String(password), PASSWORD_ROUNDS, (rehashErr, migratedHash) => {
-          if (rehashErr) {
-            console.error(rehashErr);
-            return res.status(500).json({ message: "Failed to hash password." });
-          }
-
-          db.query(
-            `UPDATE users
-             SET firstName = ?, lastName = ?, email = ?, role = ?, passwordHash = ?
-             WHERE studentId = ?`,
-            [firstName, lastName, email, String(role).toLowerCase(), migratedHash, studentId],
-            (updateErr) => {
-              if (updateErr) {
-                console.error(updateErr);
-                return res.status(500).json({ message: dbFriendlyMessage(updateErr) });
-              }
-
-              return res.json({
-                studentId,
-                firstName,
-                lastName,
-                email,
-                role: String(role).toLowerCase(),
-              });
-            }
-          );
-        });
+        return res.status(400).json({ message: "A student account with this ID already exists. Use Login instead." });
       }
 
       bcrypt.hash(String(password), PASSWORD_ROUNDS, (hashErr, passwordHash) => {
@@ -227,13 +168,13 @@ app.post("/users", (req, res) => {
           return res.status(500).json({ message: "Failed to hash password." });
         }
         const sql = `
-          INSERT INTO users (studentId, firstName, lastName, email, role, passwordHash)
-          VALUES (?, ?, ?, ?, ?, ?)
+          INSERT INTO student (studentId, firstName, lastName, email, passwordHash)
+          VALUES (?, ?, ?, ?, ?)
         `;
 
         db.query(
           sql,
-          [studentId, firstName, lastName, email, String(role).toLowerCase(), passwordHash],
+          [studentId, firstName, lastName, email, passwordHash],
           (insertErr) => {
             if (insertErr) {
               console.error(insertErr);
@@ -247,7 +188,7 @@ app.post("/users", (req, res) => {
               firstName,
               lastName,
               email,
-              role: String(role).toLowerCase(),
+              role: "student",
             });
           }
         );
@@ -270,7 +211,7 @@ app.get("/appointments", (req, res) => {
       a.notes,
       a.location,
       a.mode,
-      t.name AS tutorName
+      CONCAT(t.firstName, ' ', t.lastName) AS tutorName
     FROM appointment_info a
     JOIN tutor t ON a.tutorId = t.tutorId
     ORDER BY a.startDateTime ASC
@@ -282,6 +223,26 @@ app.get("/appointments", (req, res) => {
       return res.status(500).json({ message: dbFriendlyMessage(err) });
     }
     res.json(results);
+  });
+});
+
+// ================= AGGREGATE REPORTS =================
+app.get("/reports/appointments-by-course", (req, res) => {
+  const sql = `
+    SELECT
+      courseNum,
+      COUNT(*) AS totalAppointments
+    FROM appointment_info
+    GROUP BY courseNum
+    ORDER BY totalAppointments DESC, courseNum ASC
+  `;
+
+  db.query(sql, (err, results) => {
+    if (err) {
+      console.error(err);
+      return res.status(500).json({ message: dbFriendlyMessage(err) });
+    }
+    return res.json(results);
   });
 });
 
@@ -345,7 +306,7 @@ app.post("/appointments", (req, res) => {
   );
 });
 
-// ================= DELETE =================
+// ================= DELETE APPOINTMENT =================
 app.delete("/appointments/:id", (req, res) => {
   db.query(
     "DELETE FROM appointment_info WHERE appointmentId = ?",
@@ -358,7 +319,7 @@ app.delete("/appointments/:id", (req, res) => {
 });
 
 
-// ================= CANCEL =================
+// ================= CANCEL APPOINTMENT =================
 app.put("/appointments/:id/cancel", (req, res) => {
   db.query(
     "UPDATE appointment_info SET status = 'cancelled' WHERE appointmentId = ?",
@@ -388,13 +349,16 @@ app.put("/appointments/:id/notes", (req, res) => {
 
 // ================= GET TUTORS =================
 app.get("/tutors", (req, res) => {
-  db.query("SELECT * FROM tutor", (err, results) => {
+  db.query(
+    "SELECT tutorId, firstName, lastName, email, major, courseNum, CONCAT(firstName, ' ', lastName) AS name FROM tutor",
+    (err, results) => {
     if (err) {
       console.error(err);
       return res.status(500).json({ message: dbFriendlyMessage(err) });
     }
     res.json(results);
-  });
+    }
+  );
 });
 
 

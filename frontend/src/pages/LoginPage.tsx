@@ -1,10 +1,5 @@
 /**
- * Auth entry — numeric student ID + role (login) or full profile fields (sign-up).
- * ----------------------------------------------------------------------------
- * Reliability work before GitHub / recorded demos:
- * - Responses run through `normalizeSessionUser` (`api.ts`) so `localStorage` never stores odd MySQL shapes.
- * - `<form>` + submit handler so **Enter** works like users expect.
- * - Network errors mention **`npm run api`** + CRA **`proxy`** so graders can unblock themselves quickly.
+ * Auth entry — numeric account ID + role (login) or full profile fields (student sign-up).
  */
 import { useState, type CSSProperties } from "react";
 import { apiUrl, getApiBase, normalizeSessionUser } from "../api";
@@ -78,6 +73,7 @@ export default function LoginPage({ setUser }: any) {
   const [email, setEmail] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const loginIdLabel = role === "admin" ? "Admin ID" : "Student ID";
 
   const submit = () => {
     if (mode === "login") void handleLogin();
@@ -88,11 +84,11 @@ export default function LoginPage({ setUser }: any) {
     setError("");
     const id = studentId.trim();
     if (!id) {
-      setError("Enter your student ID.");
+      setError(`Enter your ${loginIdLabel.toLowerCase()}.`);
       return;
     }
     if (!/^\d+$/.test(id)) {
-      setError("Student ID should be numbers only.");
+      setError(`${loginIdLabel} should be numbers only.`);
       return;
     }
 
@@ -265,6 +261,7 @@ export default function LoginPage({ setUser }: any) {
               <select
                 style={styles.input}
                 value={role}
+                disabled={mode === "signup"}
                 onChange={(e) => setRole(e.target.value)}
               >
                 <option value="student">Student</option>
@@ -274,10 +271,10 @@ export default function LoginPage({ setUser }: any) {
             </label>
 
             <label style={styles.label}>
-              Student ID
+              {mode === "login" ? loginIdLabel : "Student ID"}
               <input
                 style={styles.input}
-                placeholder="e.g. 700123456"
+                placeholder={mode === "login" ? (role === "admin" ? "e.g. 9001" : "e.g. 1001") : "e.g. 700123456"}
                 inputMode="numeric"
                 autoComplete="username"
                 value={studentId}
